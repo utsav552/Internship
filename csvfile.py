@@ -19,9 +19,17 @@ for i in range(60):
         
     rec.append([epoch_time, power])
 
+clean = [["epoch_time", "power"]]   
+
+for row in rec[1:]:   
+    power = row[1]
+    if power != "" and str(power).upper() != "N/A":
+        clean.append(row)
+
 with open("a.csv" , mode= 'w' , newline= '') as file:
     writer = csv.writer(file)
     writer.writerows(rec)
 
 
 print ( "csv file is created")
+
