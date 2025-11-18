@@ -18,11 +18,14 @@ with open("b.csv", "r") as fb:
         energy = row[1]
         energy_dict[epoch] = energy
 
+all_epochs = sorted(set(power_dict.keys()) | set(energy_dict.keys()), key=int)
+
 merged = [["epoch_time", "power", "energy"]] 
 
-for epoch in power_dict:
-    if epoch in energy_dict: 
-        merged.append([epoch, power_dict[epoch], energy_dict[epoch]])
+for epoch in all_epochs:
+    power = power_dict.get(epoch , "N/A")
+    energy = energy_dict.get(epoch , "N/A")
+    merged.append([epoch, power, energy])
 
 
 with open("merged.csv", "w", newline="") as fm:
@@ -30,3 +33,4 @@ with open("merged.csv", "w", newline="") as fm:
     writer.writerows(merged)
 
 print("merged.csv created successfully!")
+
