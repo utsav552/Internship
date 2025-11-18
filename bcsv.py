@@ -14,7 +14,7 @@ for i in range(60):
     epoch_time = current_time.timestamp()
     Energy=300+i
 
-    if random.random():
+    if random.random() < 0.25:
         Energy="N/A"
         
     rec.append([epoch_time, Energy])
@@ -25,4 +25,5 @@ with open("b.csv" , mode= 'w' , newline= '') as file:
 
 
 print ( "csv file is created")
+
 
