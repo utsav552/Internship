@@ -19,11 +19,19 @@ for i in range(60):
         
     rec.append([epoch_time, Energy])
 
+clean = [["epoch_time", "Energy"]]  
+
+for row in rec[1:]:   
+    Energy = row[1]
+    if Energy != "" and str(Energy).upper() != "N/A":
+        clean.append(row)
+
 with open("b.csv" , mode= 'w' , newline= '') as file:
     writer = csv.writer(file)
-    writer.writerows(rec)
+    writer.writerows(clean)
 
 
 print ( "csv file is created")
+
 
 
