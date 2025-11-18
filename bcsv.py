@@ -12,11 +12,12 @@ rec = [
 for i in range(60):
     current_time = start_time + timedelta(minutes=i)
     epoch_time = current_time.timestamp()
-    Energy=300+(i*10)
+    Energy=300+i
     rec.append([epoch_time, Energy])
 
 with open("b.csv" , mode= 'w' , newline= '') as file:
     writer = csv.writer(file)
     writer.writerows(rec)
+
 
 print ( "csv file is created")
