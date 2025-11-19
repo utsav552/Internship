@@ -1,35 +1,29 @@
 import time
-from datetime import datetime , timedelta
+from datetime import datetime, timedelta
 import csv
 import random
 
-start_time= datetime(year =2025 , month = 11, day = 1, hour = 1, minute= 0)
+start_time = datetime(year=2025, month=11, day=1, hour=1, minute=0)
 
-rec = [
-    ["epoch_time", "power"]
-]
+def generate_clean_rows(col2_name):
+    header = ["epoch_time", col2_name]
+    yield header
 
-for i in range(60):
-    current_time = start_time + timedelta(minutes=i)
-    epoch_time = current_time.timestamp()
-    power=100+i
-
-    if random.random() < 0.25:
-        power="N/A"
-        
-    rec.append([epoch_time, power])
-
-clean = [["epoch_time", "power"]]   
-
-for row in rec[1:]:   
-    power = row[1]
-    if power != "" and str(power).upper() != "N/A":
-        clean.append(row)
-
-with open("a.csv" , mode= 'w' , newline= '') as file:
-    writer = csv.writer(file)
-    writer.writerows(rec)
+    for i in range(60):
+        if random.random() >= 0.25:
+            current_time = start_time + timedelta(minutes=i)
+            v = (100+i) if col2=="power" else 200+(i*5)
+            yield [current_time.timestamp(), v]
 
 
-print ( "csv file is created")
+files = {
+    "Power": "power.csv",
+    "Energy": "energy.csv"
+}
 
+for col2 in files:  
+    with open(files[col2], "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerows(generate_clean_rows(col2))
+
+    print(f"Created: {files[col2]} ")
