@@ -1,36 +1,28 @@
 import csv
 
-power_dict = {}
-with open("a.csv", "r") as fa:
-    reader_a = csv.reader(fa)
-    next(reader_a)  
-    for row in reader_a:
-        epoch = row[0]
-        power = row[1]
-        power_dict[epoch] = power
+def read_file(filename):
+    with open(filename) as f:
+        reader = csv.reader(f)
+        next(reader) 
+        for row in reader:
+            yield float(row[0]), row[1] 
 
-energy_dict = {}
-with open("b.csv", "r") as fb:
-    reader_b = csv.reader(fb)
-    next(reader_b)  
-    for row in reader_b:
-        epoch = row[0]
-        energy = row[1]
-        energy_dict[epoch] = energy
+power_dict  = dict(read_file("power.csv"))
+energy_dict = dict(read_file("energy.csv"))
 
-all_epochs = sorted(set(power_dict.keys()) | set(energy_dict.keys()), key=int)
+all_epochs = sorted(power_dict.keys() | energy_dict.keys())
 
-merged = [["epoch_time", "power", "energy"]] 
-
-for epoch in all_epochs:
-    power = power_dict.get(epoch , "N/A")
-    energy = energy_dict.get(epoch , "N/A")
-    merged.append([epoch, power, energy])
-
+def merged_rows():
+    yield ["epoch_time", "Power", "Energy"]
+    for epoch in all_epochs:
+        yield [
+            epoch,
+            power_dict.get(epoch, "N/A"),
+            energy_dict.get(epoch, "N/A"),
+        ]
 
 with open("merged.csv", "w", newline="") as fm:
     writer = csv.writer(fm)
-    writer.writerows(merged)
+    writer.writerows(merged_rows())
 
 print("merged.csv created successfully!")
-
