@@ -5,7 +5,7 @@ def read_file(filename):
         reader = csv.reader(f)
         next(reader) 
         for row in reader:
-            yield float(row[0]), row[1] 
+            yield (row[0], row[1]), row[2] 
 
 power_dict  = dict(read_file("power.csv"))
 energy_dict = dict(read_file("energy.csv"))
@@ -13,12 +13,13 @@ energy_dict = dict(read_file("energy.csv"))
 all_epochs = sorted(power_dict.keys() | energy_dict.keys())
 
 def merged_rows():
-    yield ["epoch_time", "Power", "Energy"]
-    for epoch in all_epochs:
+    yield ["epoch_time","gmt_dt" ,"Power", "Energy"]
+    for (epoch,gmt_dt) in all_epochs:
         yield [
             epoch,
-            power_dict.get(epoch, "N/A"),
-            energy_dict.get(epoch, "N/A"),
+            gmt_dt,
+            power_dict.get((epoch,gmt_dt), "N/A"),
+            energy_dict.get((epoch,gmt_dt), "N/A"),
         ]
 
 with open("merged.csv", "w", newline="") as fm:
