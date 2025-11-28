@@ -14,9 +14,6 @@ async def merge_csv(
     df1 = pd.read_csv(file1.file)
     df2 = pd.read_csv(file2.file)
 
-    print("DF1 columns:", df1.columns.tolist())
-    print("DF2 columns:", df2.columns.tolist())
-
     merged_df = pd.merge(df1, df2, on=["epoch_time", "gmt_datetime"], how="outer").fillna("N/a")
 
     stream = io.StringIO()
@@ -30,3 +27,4 @@ async def merge_csv(
             "Content-Disposition": "attachment; filename=merged.csv"
         }
     )
+
