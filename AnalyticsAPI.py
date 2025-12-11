@@ -3,22 +3,28 @@ from pydantic import BaseModel, RootModel
 from typing import Dict, Any, List
 from sqlalchemy import (
     create_engine, MetaData, Table, Column,
-    Integer, Float, String, select, update, insert, text
+    Integer, Float, String, BigInteger, ForeignKey,
+     insert, text
 )
 import os
+import time
 
 app = FastAPI()
-DATABASE_URL=os.getenv("DATABASE_URL")
 
+DATABASE_URL = os.getenv("Db_url")
 engine = create_engine(DATABASE_URL)
 metadata = MetaData()
+
+
 class AnalyticsItem(BaseModel):
     analytics_type: str
     asset_id: int
     data: Dict[str, Any]
 
+
 class AnalyticsPayload(RootModel):
     root: List[AnalyticsItem]
+
 
 def detect_type(value):
     if isinstance(value, int):
@@ -28,34 +34,49 @@ def detect_type(value):
     else:
         return String(255)
 
-def get_or_create_table(analytics_type: str, data: dict):
-    table_name = analytics_type.lower()
+
+analytics_main = Table(
+    "analytics_main",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("asset_id", Integer, nullable=False),
+    Column("analytics_type", String(255), nullable=False),
+    Column("epoch_time", BigInteger, nullable=False),
+)
+
+metadata.create_all(engine)
+
+def get_or_create_child_table(analytics_type: str, data: dict):
+    table_name = f"{analytics_type.lower()}_data"
 
     try:
         table = Table(table_name, metadata, autoload_with=engine)
     except Exception:
-        columns = [Column("id", Integer, primary_key=True, autoincrement=True),
-                   Column("asset_id", Integer, unique=True)]
+        columns = [
+            Column("id", Integer, primary_key=True, autoincrement=True),
+            Column("analytics_id", Integer, ForeignKey("analytics_main.id", ondelete="CASCADE")),
+        ]
         for key, value in data.items():
-            if key != "asset_id":
-                columns.append(Column(key, detect_type(value)))
+            columns.append(Column(key, detect_type(value)))
+
         table = Table(table_name, metadata, *columns)
         metadata.create_all(engine)
         return table
 
     existing_columns = table.columns.keys()
-    new_columns = []
     for key, value in data.items():
-        if key != "asset_id" and key not in existing_columns:
+        if key not in existing_columns:
             col_type = detect_type(value)
             with engine.begin() as conn:
-                conn.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {key} {col_type().compile(dialect=engine.dialect)}'))
-            new_columns.append(key)
-
-    if new_columns:
-        table = Table(table_name, metadata, autoload_with=engine)
+                conn.execute(
+                    text(
+                        f'ALTER TABLE {table_name} ADD COLUMN {key} {col_type().compile(dialect=engine.dialect)}'
+                    )
+                )
+            table = Table(table_name, metadata, autoload_with=engine)
 
     return table
+
 
 @app.post("/analytics")
 async def store_analytics(payload: AnalyticsPayload):
@@ -63,21 +84,25 @@ async def store_analytics(payload: AnalyticsPayload):
 
     with engine.begin() as conn:
         for item in rows:
-            table_data = {"asset_id": item.asset_id}
-            table_data.update(item.data)
+            current_time = int(time.time())
 
-            table = get_or_create_table(item.analytics_type, table_data)
+            ins_main = insert(analytics_main).values(
+                asset_id=item.asset_id,
+                analytics_type=item.analytics_type,
+                epoch_time=current_time,
+            )
+            res = conn.execute(ins_main)
+            analytics_id = res.inserted_primary_key[0]
 
-            stmt = select(table).where(table.c.asset_id == item.asset_id)
-            result = conn.execute(stmt).first()
-            if result:
-                upd = update(table).where(table.c.asset_id == item.asset_id).values(**table_data)
-                conn.execute(upd)
-            else:
-                ins = insert(table).values(**table_data)
-                conn.execute(ins)
+            child_table = get_or_create_child_table(item.analytics_type, item.data)
+            data_with_fk = {"analytics_id": analytics_id}
+            data_with_fk.update(item.data)
 
-    return {"message": "Analytics updated successfully"}
+            ins_child = insert(child_table).values(**data_with_fk)
+            conn.execute(ins_child)
+
+    return {"message": "Analytics stored successfully (normalized + dynamic)"}
+
 
 @app.get("/")
 def root():
